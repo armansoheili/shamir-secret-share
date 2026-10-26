@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import secrets
 
-__all__ = ["split", "combine", "encode_share", "decode_share", "FIELD_SIZE", "MAX_SHARES"]
+__all__ = ["split", "combine", "encode_share", "decode_share", "combine_encoded", "FIELD_SIZE", "MAX_SHARES"]
 
 # Irreducible polynomial for GF(2^8): x^8 + x^4 + x^3 + x + 1 (0x11B), the AES field.
 _IRREDUCIBLE = 0x11B
@@ -213,6 +213,26 @@ def decode_share(text: str) -> tuple[int, bytes]:
     if not (1 <= x <= MAX_SHARES) or not y:
         raise ValueError("malformed share string")
     return x, y
+
+
+def combine_encoded(texts: list[str]) -> bytes:
+    """Reconstruct the secret from encoded share strings (see encode_share).
+
+    Handy when shares arrive as portable text (e.g. pasted from a chat or a
+    printed backup) instead of ``(x, y)`` tuples.
+
+    >>> shares = split(b"top secret", n=4, threshold=2)
+    >>> enc = [encode_share(s) for s in shares]
+    >>> combine_encoded(enc[:2]) == b"top secret"
+    True
+    >>> combine_encoded(enc[1:3]) == b"top secret"  # any threshold subset works
+    True
+    >>> combine_encoded(["zz-00"])
+    Traceback (most recent call last):
+    ...
+    ValueError: malformed share string
+    """
+    return combine([decode_share(t) for t in texts])
 
 
 def _demo() -> None:
